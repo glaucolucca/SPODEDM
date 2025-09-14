@@ -1,21 +1,17 @@
-import React from "react";
+import React, { useMemo, useState } from 'react';
 import { Button, Keyboard, StyleSheet, Text, TextInput, View } from "react-native";
 import { FlatList, GestureHandlerRootView } from "react-native-gesture-handler";
-
 import * as crypto from "expo-crypto";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import FilterBar from "./components/FilterBar";
 
 type uuid = string;
-
 type TodoItem = { id: uuid; value: string; done: boolean };
 
 function ListItem({ todoItem, toggleTodo }: { todoItem: TodoItem; toggleTodo: (id: uuid) => void }) {
-
   const handlePress = (id: uuid) => {
-    console.log(`Todo item with id ${id} marked as complete.`);
     toggleTodo(id);
   };
-
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
       {!todoItem.done ? (
@@ -32,15 +28,12 @@ function ListItem({ todoItem, toggleTodo }: { todoItem: TodoItem; toggleTodo: (i
 
 function AddTodoForm({ addTodoHandler }: { addTodoHandler: (text: string) => void }) {
   const [text, setText] = React.useState("");
-
   const handlePress = () => {
     if(text.trim().length === 0) return;
-    
     addTodoHandler(text);
     setText("");
     Keyboard.dismiss();
   };
-
   return (
     <View style={{ width: "100%", marginTop: 10, paddingHorizontal: 20, alignItems: "center" }}>
       <TextInput
@@ -56,23 +49,24 @@ function AddTodoForm({ addTodoHandler }: { addTodoHandler: (text: string) => voi
   );
 }
 
-
 export default function Index() {
-  
   const [todos, setTodos] = React.useState<TodoItem[]>([
     { id: crypto.randomUUID(), value: "Sample Todo", done: false },
     { id: crypto.randomUUID(), value: "Sample Todo 2", done: true },
     { id: crypto.randomUUID(), value: "Sample Todo 3", done: false },
   ]);
-
+  const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
+  const visibleTodos = useMemo(() => {
+    if (filter === 'all') return todos;
+    if (filter === 'pending') return todos.filter(t => !t.done);
+    return todos.filter(t => t.done);
+  }, [todos, filter]);
   const addTodo = (text: string) => {
     setTodos([...todos, { id: crypto.randomUUID(), value: text, done: false }]);
   };
-
   const toggleTodo = (id: uuid) => {
     setTodos(todos.map(todo => todo.id === id ? { ...todo, done: !todo.done } : todo));
   };
-
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
@@ -81,9 +75,10 @@ export default function Index() {
             TODO List
           </Text>
           <AddTodoForm addTodoHandler={addTodo} />
+          <FilterBar value={filter} onChange={setFilter} />
           <FlatList
             style={styles.list}
-            data={todos.sort((a, b) => a.done === b.done ? 0 : a.done ? 1 : -1)}
+            data={visibleTodos.sort((a, b) => a.done === b.done ? 0 : a.done ? 1 : -1)}
             renderItem={({ item }) => <ListItem todoItem={item} toggleTodo={toggleTodo} />}
           />
         </GestureHandlerRootView>
@@ -126,5 +121,3 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 });
-
-
